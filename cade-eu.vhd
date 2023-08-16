@@ -21,20 +21,37 @@ architecture arq of cade_eu is
     x:  std_logic_vector(5 downto 0);
     y:  std_logic_vector(5 downto 0);
   end record;
+  constant N_ROOM: integer := 8;
+  signal ponto_de_teste: coord;
   type state is (init, idle, search_down, search_up, search_left, search_right, src_X0, src_Y0, src_X1, src_Y1, retorno);
   signal EA, PE: state;
-  signal is_room, reset: std_logic := '0';
-  signal has_wall: std_logic_vector(3 downto 0) := "0000";
-  constant N_ROOM: integer := 8;
+  signal is_room: std_logic;
+  signal has_wall: std_logic_vector(3 downto 0);
   type ROOM is array(0 to N_ROOM) of coord;
   signal salas : ROOM;
 begin
-  process FSD (reset, clock)
+  -- FSM
+  process(reset, clock)
   begin
     if reset = '1' then
-      --...
+      EA <= idle;
+      is_room <= '0';
+      has_wall <= "0000";
+      room <= "0000";
+      address <= x"00";
+      finish <= '0';
     else if clock'event and clock = '1' then
       EA <= PE;
     end if;
-  end process FSD;
+  end process;
+  -- logica de estados
+  process(EA, find, prog)
+  begin
+    case EA is
+      when idle =>  if prog = '1' then
+                      PE <= init;
+                    else PE <= idle;
+
+      when init =>  
+      when 
     
