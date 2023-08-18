@@ -99,3 +99,4 @@ begin
       when src_Y1 =>
                       PE <= retorno;
       when retorno =>
+                      PE <= idle;
