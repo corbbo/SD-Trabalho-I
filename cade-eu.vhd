@@ -36,11 +36,28 @@ begin
     if reset = '1' then
       EA <= idle;
       is_room <= '0';
-      has_wall <= "0000";
+      has_wall <= "0000"; --UP , DOWN , LEFT , RIGHT
       room <= "0000";
       address <= x"00";
       finish <= '0';
     else if clock'event and clock = '1' then
+      case EA is
+              when init =>
+                      ponto_de_teste.x <= x; -- pega o ponto que vai testar e coloca ele em coord.x
+                      ponto_de_teste.y <= y; -- pega o ponto que vai testar e coloca ele em coord.y
+
+              when search_up => --while !(is wall) volta pra search_up
+                      address <= ponto_de_teste.y & ponto_de_teste.x;
+
+              when search_down => 
+              when search_left => 
+              when search_right => 
+              when src_X0 =>
+              when src_Y0 =>
+              when src_X1 =>
+              when src_Y1 =>
+              when retorno =>
+
       EA <= PE;
     end if;
   end process;
@@ -48,10 +65,37 @@ begin
   process(EA, find, prog)
   begin
     case EA is
-      when idle =>  if prog = '1' then
+      when idle =>  
+      if prog = '1' then
                       PE <= init;
                     else PE <= idle;
 
-      when init =>  
-      when 
-    
+      when init =>
+                      PE <= search_up;
+      when search_up => --while !(is wall) volta pra search_up
+                      if point = '0' and ponto_de_teste.y /= '0' then --se não achou parede, nem terminou a grade, continua procurando
+                        PE <= search_up;
+                      else if point = '1' then
+                        -- tem que setar "has_wall" => '1000' e PE => search_down
+                        has_wall => '1000';
+                        PE <= search_down;
+                      else if ponto_de_teste.y = '0' then --se y 'estoura', não é uma sala.
+                        PE <= init;
+                      else others
+                        PE <= init;
+
+      when search_down => 
+                      PE <= search_left;
+      when search_left => 
+                      PE <= search_right;
+      when search_right => 
+                      PE <= src_X0;
+      when src_X0 =>
+                      PE <= src_Y0;
+      when src_Y0 =>
+                      PE <= src_X1;
+      when src_X1 =>
+                      PE <= src_Y1;
+      when src_Y1 =>
+                      PE <= retorno;
+      when retorno =>
