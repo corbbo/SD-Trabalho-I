@@ -77,7 +77,7 @@ begin
                         PE <= search_up;
                       else if point = '1' then
                         -- tem que setar "has_wall" => '1000' e PE => search_down
-                        has_wall => '1000';
+                        has_wall(3) => '1'; -- 3 downto 0, bit 3 setado pra 1
                         PE <= search_down;
                       else if ponto_de_teste.y = '0' then --se y 'estoura', não é uma sala.
                         PE <= init;
