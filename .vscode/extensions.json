@@ -1,0 +1,6 @@
+{
+    "recommendations": [
+        "rjyoung.vscode-modern-vhdl-support",
+        "ms-vscode.remote-repositories"
+    ]
+}
