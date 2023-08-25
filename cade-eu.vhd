@@ -22,11 +22,12 @@ architecture arq of cade_eu is
     y:  std_logic_vector(5 downto 0);
   end record;
   constant N_ROOM: integer := 8;
-  signal ponto_de_teste, coord_XY0, coord_XY1: coord;
+  signal ponto_de_teste, coord_XYMin, coord_XYMax: coord;
   type state is (
                 init, idle, 
                 search_down, set_wall_down, search_up, set_wall_up, search_left, set_wall_left, search_right, set_wall_right, 
-                src_X0, set_wall_srcX0, src_Y0, set_wall_srcY0, src_X1, set_wall_srcX1, src_Y1, set_wall_srcY1, retorno
+                src_XMin, set_wall_srcXMin, src_YMin, set_wall_srcYMin, src_XMax, set_wall_srcXMax, src_YMax, set_wall_srcYMax, 
+                retorno, set_room
                 );
   signal EA, PE: state;
   signal is_room: std_logic;
@@ -37,7 +38,7 @@ begin
     --prof disse que era pra colocar as saidas fora do process, para não atrasar o clock
     address <= ponto_de_teste.y & ponto_de_teste.x
     when    EA = search_up or EA = search_down or EA = search_left or EA = search_right
-    or      EA = src_X0 or EA = src_X1 or EA = src_Y0 or EA = src_Y1;
+    or      EA = src_XMin or EA = src_XMax or EA = src_YMin or EA = src_YMax;
 
   -- FSM
   process(reset, clock)
@@ -55,43 +56,63 @@ begin
                          ponto_de_teste.y <= y; -- pega o ponto que vai testar e coloca ele em coord.y
             
             when search_up                            => ponto_de_teste.y <= ponto_de_teste.y + '1';
-            when search_down    => 
-            when search_right   =>  
-            when search_left =>     
+            when search_down                          => ponto_de_teste.y <= ponto_de_teste.y - '1';
+            when search_right                         => ponto_de_teste.x <= ponto_de_teste.x + '1';
+            when search_left                          => ponto_de_teste.x <= ponto_de_teste.x - '1';
+
+            when src_XMin                             => ponto_de_teste.x <= ponto_de_teste.x + '1';
+            when src_XMax                             => ponto_de_teste.x <= ponto_de_teste.x - '1';
+            when src_YMin                             => ponto_de_teste.y <= ponto_de_teste.y + '1';
+            when src_YMax                             => ponto_de_teste.y <= ponto_de_teste.y - '1';
 
             when set_wall_up                          => has_wall(3) <= '1';
+                                                         coord_XYMax.y <= ponto_de_teste.y;
                                                          ponto_de_teste.y <= y;
 
             when set_wall_down                        => has_wall(2) <= '1';
+                                                         coord_XYMin.y <= ponto_de_teste.y;
                                                          ponto_de_teste.y <= y;
 
             when set_wall_left                        => has_wall(1) <= '1';
-                                                  
+                                                         coord_XYMin.x <= ponto_de_teste.x;
+                                                         ponto_de_teste.x <= x;
+
             when set_wall_right                       => has_wall(0) <= '1';
-                                                         if has_wall = "1111" then
-                                                            is_room <= '1';
-                                                            has_wall <= "0000";
-                                                         else
-                                                            is_room <= '0';
-                                                            room <= "0000";
-                                                            fin <= '1';
-                                                         end if;
+                                                         coord_XYMax.x <= ponto_de_teste.x;
+                                                         ponto_de_teste.x < = x;
+                                                         --TODO: setar 
+                                                        -- if has_wall = "1111" then
+                                                        --    is_room <= '1';
+                                                        --    has_wall <= "0000";
+                                                        -- else
+                                                        --    is_room <= '0';
+                                                        --    room <= "0000";
+                                                        --    fin <= '1';
+                                                        -- end if;
+            when set_room                             =>  if has_wall = "1111" then
+                                                           is_room <= '1';
+                                                           has_wall <= "0000";
+                                                        else
+                                                           is_room <= '0';
+                                                           room <= "0000";
+                                                           fin <= '1';
+                                                        end if;
                                                                                                                          
-            when set_wall_srcX0                       => if is_room = '1' then                                                                         
+            when set_wall_srcXMin                       => if is_room = '1' then                                                                         
                                                             has_wall(3) <= '1';
-                                                            coord_XY0.x <= ponto_de_teste.x;
+                                                            coord_XYMin.x <= ponto_de_teste.x;
                                                             is_room <= '0'; -- reset pois foi setado para '1' no fim dos searches para validar os proximos estados, voltara a ser '1' se no fim dos srcs has_wall for "1111"
                                                           else -- failsafe
                                                             is_room <= '0';
                                                             room <= "0000";
                                                             fin <= '1';
                                                           end if;
-            when set_wall_srcY0                       => has_wall(2) <= '1';
-                                                         coord_XY0.y <= ponto_de_teste.y;
-            when set_wall_srcX1                       => has_wall(1) <= '1';
-                                                         coord_XY1.x <= ponto_de_teste.x;
-            when set_wall_srcY1                       => has_wall(0) <= '1';
-                                                         coord_XY1.y <= ponto_de_teste.y;
+            when set_wall_srcYMin                       => has_wall(2) <= '1';
+                                                         coord_XYMin.y <= ponto_de_teste.y;
+            when set_wall_srcXMax                       => has_wall(1) <= '1';
+                                                         coord_XYMax.x <= ponto_de_teste.x;
+            when set_wall_srcYMax                       => has_wall(0) <= '1';
+                                                         coord_XYMax.y <= ponto_de_teste.y;
                                                          if has_wall = "1111" then
                                                           is_room <= '1';
                                                        else
@@ -171,48 +192,51 @@ if point = '0' and ponto_de_teste.x /= "111111" then --se não achou parede, nem
 end if;
 --------------------------------------------------------------------------------
   when set_wall_right =>
-PE <= src_X0;
+    PE <= set_room;
 --------------------------------------------------------------------------------
-  when src_X0 => --acha o valor minimo de X
-  if point = '1' then --enquanto for uma parede, continua andando
-    PE <= src_X0;
+  when src_XMin => --acha o valor minimo de X
+  if point = '1' and ponto_de_teste.x <= coord_XYMax.x and ponto_de_teste.x >= coord_XYMin.x  then --enquanto for uma parede, continua andando
+    PE <= src_XMin;
   else -- se a parede acabar, seta o XY
-    PE <= set_wall_srcX0;
+    PE <= set_wall_srcXMin;
   end if;
 --------------------------------------------------------------------------------
-  when set_wall_srcX0 =>
-PE <= src_Y0;
+  when set_wall_srcXMin =>
+PE <= src_YMin;
 --------------------------------------------------------------------------------
-  when src_Y0 => -- --acha o valor minimo de Y
-  if point = '1' then 
-    PE <=  src_Y0;
+  when src_YMin => -- --acha o valor minimo de Y
+  if point = '1' and ponto_de_teste.y <= coord_XYMax.y and ponto_de_teste.y >= coord_XYMax.y then 
+    PE <=  src_YMin;
   else
-    PE <= set_wall_srcY0;
+    PE <= set_wall_srcYMin;
   end if;
 --------------------------------------------------------------------------------
-  when set_wall_srcY0 =>
-PE <= src_X1;
+  when set_wall_srcYMin =>
+PE <= src_XMax;
 --------------------------------------------------------------------------------
-  when src_X1 => -- acha o valor maximo de X
-    if point = '1' then 
-    PE <=  src_X1;
+  when src_XMax => -- acha o valor maximo de X
+    if point = '1' and ponto_de_teste.x <= coord_XYMax.x and ponto_de_teste.x >= coord_XYMin.x then 
+    PE <=  src_XMax;
   else
-    PE <= set_wall_srcX1;
+    PE <= set_wall_srcXMax;
   end if;
 --------------------------------------------------------------------------------
-  when set_wall_srcX1 =>
-PE <= src_Y1;
+  when set_wall_srcXMax =>
+PE <= src_YMax;
 --------------------------------------------------------------------------------
-  when src_Y1 => -- acha o valor maximo de Y
-    if point = '1' then 
-    PE <=  src_Y1;
+  when src_YMax => -- acha o valor maximo de Y
+    if point = '1' and ponto_de_teste.y <= coord_XYMax.y and ponto_de_teste.y >= coord_XYMin.y then 
+    PE <=  src_YMax;
   else
-    PE <= set_wall_srcY1;
+    PE <= set_wall_srcYMax;
   end if;
 --------------------------------------------------------------------------------
-  when set_wall_srcY1 =>
+  when set_wall_srcYMax =>
 PE <= finish;
 --------------------------------------------------------------------------------
   when retorno =>
 PE <= idle;
+--------------------------------------------------------------------------------
+  when set_room => 
+PE <= src_XMin;
 --------------------------------------------------------------------------------
