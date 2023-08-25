@@ -34,6 +34,11 @@ architecture arq of cade_eu is
   type ROOM is array(0 to N_ROOM) of coord;
   signal salas : ROOM;
 begin
+    --prof disse que era pra colocar as saidas fora do process, para não atrasar o clock
+    address <= ponto_de_teste.y & ponto_de_teste.x
+    when    EA = search_up or EA = search_down or EA = search_left or EA = search_right
+    or      EA = src_X0 or EA = src_X1 or EA = src_Y0 or EA = src_Y1;
+
   -- FSM
   process(reset, clock)
   begin
@@ -48,50 +53,56 @@ begin
         case EA is
             when init => ponto_de_teste.x <= x; -- pega o ponto que vai testar e coloca ele em coord.x
                          ponto_de_teste.y <= y; -- pega o ponto que vai testar e coloca ele em coord.y
+            
+            when search_up                            => ponto_de_teste.y <= ponto_de_teste.y + '1';
+            when search_down    => 
+            when search_right   =>  
+            when search_left =>     
 
-            when search_up | search_down | search_left | search_right => address <= ponto_de_teste.y & ponto_de_teste.x;
+            when set_wall_up                          => has_wall(3) <= '1';
+                                                         ponto_de_teste.y <= y;
 
-            when set_wall_up                                          => has_wall(3) <= '1';
-            when set_wall_down                                        => has_wall(2) <= '1';
-            when set_wall_left                                        => has_wall(1) <= '1';
-            when set_wall_right                                       => has_wall(0) <= '1';
-                                                                         if has_wall = "1111" then
-                                                                            is_room <= '1';
-                                                                            has_wall <= "0000";
-                                                                         else
-                                                                            is_room <= '0';
-                                                                            room <= "0000";
-                                                                            fin <= '1';
-                                                                         end if;
-                                                                                                                                         
-            when src_X0 | src_X1 | src_Y0 | src_Y1                    => address <= ponto_de_teste.y & ponto_de_teste.x
+            when set_wall_down                        => has_wall(2) <= '1';
+                                                         ponto_de_teste.y <= y;
 
-            when set_wall_srcX0                                       => if is_room = '1' then                                                                         
-                                                                            has_wall(3) <= '1';
-                                                                            coord_XY0.x <= ponto_de_teste.x;
-                                                                            is_room <= '0'; -- reset pois foi setado para '1' no fim dos searches para validar os proximos estados, voltara a ser '1' se no fim dos srcs has_wall for "1111"
-                                                                          else -- failsafe
-                                                                            is_room <= '0';
-                                                                            room <= "0000";
-                                                                            fin <= '1';
-                                                                          end if;
-            when set_wall_srcY0                                       => has_wall(2) <= '1';
-                                                                         coord_XY0.y <= ponto_de_teste.y;
-            when set_wall_srcX1                                       => has_wall(1) <= '1';
-                                                                         coord_XY1.x <= ponto_de_teste.x;
-            when set_wall_srcY1                                       => has_wall(0) <= '1';
-                                                                         coord_XY1.y <= ponto_de_teste.y;
-                                                                         if has_wall = "1111" then
-                                                                          is_room <= '1';
-                                                                       else
-                                                                          is_room <= '0';
-                                                                          room <= "0000";
-                                                                          fin <= '1';
-                                                                       end if;
+            when set_wall_left                        => has_wall(1) <= '1';
+                                                  
+            when set_wall_right                       => has_wall(0) <= '1';
+                                                         if has_wall = "1111" then
+                                                            is_room <= '1';
+                                                            has_wall <= "0000";
+                                                         else
+                                                            is_room <= '0';
+                                                            room <= "0000";
+                                                            fin <= '1';
+                                                         end if;
+                                                                                                                         
+            when set_wall_srcX0                       => if is_room = '1' then                                                                         
+                                                            has_wall(3) <= '1';
+                                                            coord_XY0.x <= ponto_de_teste.x;
+                                                            is_room <= '0'; -- reset pois foi setado para '1' no fim dos searches para validar os proximos estados, voltara a ser '1' se no fim dos srcs has_wall for "1111"
+                                                          else -- failsafe
+                                                            is_room <= '0';
+                                                            room <= "0000";
+                                                            fin <= '1';
+                                                          end if;
+            when set_wall_srcY0                       => has_wall(2) <= '1';
+                                                         coord_XY0.y <= ponto_de_teste.y;
+            when set_wall_srcX1                       => has_wall(1) <= '1';
+                                                         coord_XY1.x <= ponto_de_teste.x;
+            when set_wall_srcY1                       => has_wall(0) <= '1';
+                                                         coord_XY1.y <= ponto_de_teste.y;
+                                                         if has_wall = "1111" then
+                                                          is_room <= '1';
+                                                       else
+                                                          is_room <= '0';
+                                                          room <= "0000";
+                                                          fin <= '1';
+                                                       end if;
               
-            when retorno                                              => fin <= '1';
+            when retorno                              => fin <= '1';
               
-            when others                                               =>                                               address <= x"00";
+            when others                               => address <= x"00";
                                                                          
             -- sim kkkkk
         end case;
