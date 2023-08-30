@@ -1,7 +1,7 @@
 ---------------------------------------------------------------------------------------------------------
--- TESTBENCH FOR THE ondeestou CIRCUIT
--- AUTHORS: 
--- DATE: 02/2023
+-- TEST BENCH FOR THE ondeestou CIRCUIT
+-- AUTHOR: FERNANDO GEHM MORAES
+-- DATE:  28 october 2014
 ---------------------------------------------------------------------------------------------------------
 library IEEE;
 use IEEE.std_logic_1164.all;
@@ -91,7 +91,7 @@ architecture teste of tb_ondeestou is
           --0123456789012345678901234567890123456789012345678901234567890123
 
    type coord is record  
-      x, y, resp: integer;
+      x,y, resp: integer;
    end record;
    
    constant N_SALAS: integer := 8;      -- there is 8 valid rooms
@@ -99,18 +99,18 @@ architecture teste of tb_ondeestou is
 
    --- ROOMS'S SIZE - the third filed (expected answer) is not used
    type def_salas is array(0 to N_SALAS) of coord ;
-   signal salas : def_salas := (  (0,0,0), (26,8,0), (10,3,0), (6,6,0), (11,20,0), (20,12,0), (5,5,0), (30,10,0),  (15,8,0) );
-   -- CONV_STD_LOGIC_VECTOR( salas(cont_s).x ,6); ----> Exemplo de como conveter o valor para STD_LOGIC_VECTOR                                 
+   signal salas : def_salas := (  (0,0,0), (26,8,0), (10,3,0), (6,6,0), (11,20,0), 
+                                           (20,12,0), (5,5,0), (30,10,0),  (15,8,0) );
+                                    
                                  
     -- coordinates for the tests -----------------------------------------------
    type room is array(0 to MAX_TEST-1) of coord ;                                 
-   constant cc: room := (( 7, 8,1), (11, 8, 0), (21,11,2), (34,24,0), (53,20,3), (29,25,0),
+   constant cc: room := ((27, 5,1), (11, 8, 0), (21,11,2), (34,24,0), (53,20,3), (29,25,0),
                          ( 9,16,4), (15,39, 0), (38,39,5), (42,43,0), (16,45,6), (55,47,7), 
                          (42,58,0), (10,57, 8), (6,40, 0), (54,30,5), (22,45,0), (16,51,0) );
-
  begin
 
-   dut:  entity work.ondeestou port map(clock=>clock, reset=>reset, 
+   a1:  entity work.ondeestou port map(clock=>clock, reset=>reset, 
                                        x=>x,  y=>y, achar=>achar, prog=>prog,
                                        address=>address, ponto=>ponto, 
                                        fim=>fim, sala=>sala);
@@ -122,31 +122,49 @@ architecture teste of tb_ondeestou is
    clock <=  not clock after 5 ns;
 
    process
-     variable cont, cont_s : integer := 0;
+     variable cont, cont_s : integer :=0;
    begin
    
-      -- espera 100 ns para começar a simulação
+      -- time to start the simulation
       if cont_s = 0 then
            wait for 100 ns;
       end if;
       
       if cont_s < N_SALAS+1 then
-         -- envia o tamanho das salas para o circuito
+         -- sends the rooms' coordinates to the circuit
          wait until clock'event and clock='0';
          prog <= '1';
-         x <= CONV_STD_LOGIC_VECTOR( salas(cont_s).x ,6);          
+         x <= CONV_STD_LOGIC_VECTOR( salas(cont_s).x ,6);
          y <= CONV_STD_LOGIC_VECTOR( salas(cont_s).y ,6);          
          cont_s := cont_s + 1;
       else
-         -- processo de teste! envio dos pares (x,y) e comapração com a resposta esperada!!
-         wait for 100 ns;
-         x <= CONV_STD_LOGIC_VECTOR( cc(cont).x ,6);          
-         y <= CONV_STD_LOGIC_VECTOR( cc(cont).y ,6);
-         wait for 20 ns;
-         achar <= '1';
-         wait for 20 ns;
-         achar <= '0';
-         wait;       
+          -- sends the [x,y] pairs to find where they are in the map
+          wait for 20 ns;
+          prog <= '0';
+          wait for 100 ns;
+          x <= CONV_STD_LOGIC_VECTOR( cc(cont).x,6);
+          y <= CONV_STD_LOGIC_VECTOR( cc(cont).y,6);
+          wait for 10 ns;
+          achar <= '1';        
+          wait for 10 ns;
+          achar <= '0';  
+          wait until fim='1';     
+
+          assert cc(cont).resp /= conv_integer(sala)
+             report  "Teste: " & integer'image(cont+1) & " OK! sala: "  &  integer'image(conv_integer(sala))
+              severity note;
+
+
+          assert cc(cont).resp = conv_integer(sala)
+             report   "Teste: " & integer'image(cont+1) & " ERRO!!!  sala correta: "  
+                   &  integer'image(cc(cont).resp) & " sala calculada "   & integer'image(conv_integer(sala))
+               severity note;
+     
+          cont := cont + 1 ;        
+    
+          assert cont < MAX_TEST
+             report "TERMINOU O TESTE"
+             severity failure;
               
      end if;   
   end process;    

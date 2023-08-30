@@ -22,23 +22,40 @@ architecture arq of cade_eu is
     y:  std_logic_vector(5 downto 0);
   end record;
   constant N_ROOM: integer := 8;
-  signal ponto_de_teste, coord_XYMin, coord_XYMax: coord;
+  signal ponto_de_teste, coord_XYMin, coord_XYMax, coord_sala: coord;
   type state is (
                 init, idle, 
                 search_down, set_wall_down, search_up, set_wall_up, search_left, set_wall_left, search_right, set_wall_right, 
                 src_XMin, set_wall_srcXMin, src_YMin, set_wall_srcYMin, src_XMax, set_wall_srcXMax, src_YMax, set_wall_srcYMax, 
-                retorno, set_room
+                retorno, set_room, final_test
                 );
   signal EA, PE: state;
   signal is_room: std_logic;
   signal has_wall: std_logic_vector(3 downto 0);
   type ROOM is array(0 to N_ROOM) of coord;
   signal salas : ROOM;
+  signal cont_sala : STD_LOGIC_VECTOR(3 downto 0);
 begin
-    --prof disse que era pra colocar as saidas fora do process, para não atrasar o clock
     address <= ponto_de_teste.y & ponto_de_teste.x
     when    EA = search_up or EA = search_down or EA = search_left or EA = search_right
-    or      EA = src_XMin or EA = src_XMax or EA = src_YMin or EA = src_YMax;
+    or      EA = src_XMin or EA = src_XMax or EA = src_YMin or EA = src_YMax else
+    others=>'0'
+
+   -- registro de salas
+   process (reset, clock)
+   begin
+      if reset='1' then 
+            cont_sala <= (others=>'0');
+      elsif clock'event and clock='1' then
+            if  prog='1' then
+               salas(conv_integer(cont_sala)).x <= x;
+               salas(conv_integer(cont_sala)).y <= y;
+               if cont_sala<N_ROOM then
+                     cont_sala <= cont_sala + 1;
+               end if;
+            end if;
+      end if;
+   end process;
 
   -- FSM
   process(reset, clock)
@@ -79,16 +96,8 @@ begin
 
             when set_wall_right                       => has_wall(0) <= '1';
                                                          coord_XYMax.x <= ponto_de_teste.x;
-                                                         ponto_de_teste.x < = x;
-                                                         --TODO: setar 
-                                                        -- if has_wall = "1111" then
-                                                        --    is_room <= '1';
-                                                        --    has_wall <= "0000";
-                                                        -- else
-                                                        --    is_room <= '0';
-                                                        --    room <= "0000";
-                                                        --    fin <= '1';
-                                                        -- end if;
+                                                         ponto_de_teste.x <= x;
+
             when set_room                             =>  if has_wall = "1111" then
                                                            is_room <= '1';
                                                            has_wall <= "0000";
@@ -117,14 +126,14 @@ begin
                                                            ponto_de_teste.x <= coord_XYMax.x; -- recebe coords maximas para teste em src_YMax
                                                            -- nao recebe coord_XYMax.y pois ja recebeu no set_wall_srcYMin
             when set_wall_srcYMax                       => has_wall(0) <= '1';
-                                                           -- teste final em outro estado?
-                                                          -- if has_wall = "1111" then
-                                                          -- is_room <= '1';
-                                                          -- else
-                                                          --  is_room <= '0';
-                                                          --  room <= "0000";
-                                                          --  fin <= '1';
-                                                          --  end if;
+
+            when final_test                             => if has_wall = "1111" then
+                                                            is_room <= '1';
+                                                           else
+                                                            is_room <= '0';
+                                                            room <= "0000";
+                                                           end if;
+                                                           fin <= '1';
               
             when retorno                              => fin <= '1';
               
@@ -236,7 +245,7 @@ PE <= src_YMax;
   end if;
 --------------------------------------------------------------------------------
   when set_wall_srcYMax =>
-PE <= finish;
+PE <= final_test;
 --------------------------------------------------------------------------------
   when retorno =>
 PE <= idle;
@@ -244,3 +253,21 @@ PE <= idle;
   when set_room => 
 PE <= src_XMin;
 --------------------------------------------------------------------------------
+--process(fin)
+--begin
+--  if fin = '1' and is_room = '1' then
+--    coord_sala.x <= coord_XYMax.x - coord_XYMin.x;
+--    coord_sala.y <= coord_XYMax.y - coord_XYMin.y;
+--    cont_sala <= "0000";
+--    for cont_sala in 0 to N_ROOM loop
+--      if salas(conv_integer(cont_sala)).x = coord_sala.x
+--      and salas(conv_integer(cont_sala)).y = coord_sala.y then
+--        room <= cont_sala;
+--       else
+--         cont_sala <= cont_sala + '1';
+--       end if;
+--     end loop;
+--   end if;
+-- end process;
+-- TODO: fazer isso ser maquina de estados
+-- TODO: conferir o TB
