@@ -27,7 +27,7 @@ architecture arq of cade_eu is
                 init, idle, 
                 search_down, set_wall_down, search_up, set_wall_up, search_left, set_wall_left, search_right, set_wall_right, 
                 src_XMin, set_wall_srcXMin, src_YMin, set_wall_srcYMin, src_XMax, set_wall_srcXMax, src_YMax, set_wall_srcYMax, 
-                retorno, set_room, final_test
+                retorno, set_room, final_test, finaleira_fim
                 );
   signal EA, PE: state;
   signal is_room: std_logic;
@@ -135,8 +135,21 @@ begin
                                                            end if;
                                                            fin <= '1';
               
-            when retorno                              => fin <= '1';
-              
+            when retorno                                => fin <= '1';
+                                                            
+            when finaleira_fim                          => coord_sala.x <= coord_XYMax.x - coord_XYMin.x;
+                                                           coord_sala.y <= coord_XYMax.y - coord_XYMin.y;
+                                                           cont_sala <= "0000";
+                                                           for cont_sala in 0 to N_ROOM loop
+                                                             if salas(conv_integer(cont_sala)).x = coord_sala.x
+                                                             and salas(conv_integer(cont_sala)).y = coord_sala.y then
+                                                               room <= cont_sala;
+                                                               else
+                                                                 cont_sala <= cont_sala + '1';
+                                                               end if;
+                                                             end loop;
+                                                           end if;
+            
             when others                               => address <= x"00";
                                                                          
         end case;
@@ -145,17 +158,31 @@ begin
   end process
 
   -- logica de estados
-  process(EA, find)
+  process(EA, find, fin)
   begin
     case EA is
 --------------------------------------------------------------------------------
-  when init =>
+  when init => 
+  if fin = '1' and is_room = '1' then
+    PE <= finaleira_fim;
+  else
   PE <= search_up;
---------------------------------------------------------------------------------
+  end if;
+  --------------------------------------------------------------------------------
+when finaleira_fim => 
+if fin = '1' and is_room = '1' then
+  PE <= finaleira_fim;
+else
+PE <= idle;
+  end if;
+  --------------------------------------------------------------------------------
   when idle =>
   if find = '1' then
     PE <= init;
-  else PE <= idle;
+  else if fin = '1' and is_room = '1' then
+      PE <= finaleira_fim;
+    else
+      PE <= idle;
   end if;
 -------------------------------------------------------------------------------- 
   when search_down => 
@@ -163,99 +190,157 @@ if point = '0' and ponto_de_teste.y /= "111111" then --se não achou parede, nem
 PE <= search_down;
 else if point = '1' then -- achou parede
     PE <= set_wall_down;
- else others
+else if fin = '1' and is_room = '1' then
+    PE <= finaleira_fim;
+  else others
      PE <= retorno;
 end if;
 --------------------------------------------------------------------------------
-  when set_wall_down =>
+  when set_wall_down => 
+  if fin = '1' and is_room = '1' then
+    PE <= finaleira_fim;
+  else
 PE <= search_up;
---------------------------------------------------------------------------------
+  end if;
+  --------------------------------------------------------------------------------
   when search_up =>
   --while !(is wall) volta pra search_up
 if point = '0' and ponto_de_teste.y /= "000000" then -- se não achou parede, nem terminou a grade, continua procurando
     PE <= search_up;
     else if point = '1' then -- achou parede
         PE <= set_wall_up;
-    else others -- a grade terminou sem achar parede, logo não é uma sala
+    else if fin = '1' and is_room = '1' then
+        PE <= finaleira_fim;
+      else others -- a grade terminou sem achar parede, logo não é uma sala
         PE <= retorno;
 end if;
 --------------------------------------------------------------------------------
-  when set_wall_up =>
+  when set_wall_up => 
+  if fin = '1' and is_room = '1' then
+    PE <= finaleira_fim;
+  else if fin = '1' and is_room = '1' then
+      PE <= finaleira_fim;
+    else
 PE <= search_left;
---------------------------------------------------------------------------------
+  end if;
+  --------------------------------------------------------------------------------
   when search_left =>
 if point = '0' and ponto_de_teste.x /= "000000" then --se não achou parede, nem terminou a grade, continua procurando
     PE <= search_left;
     else if point = '1' then -- achou parede
         PE <= set_wall_right;
-    else others
+    else if fin = '1' and is_room = '1' then
+        PE <= finaleira_fim;
+      else others
         PE <= retorno;
 end if;
 --------------------------------------------------------------------------------
-  when set_wall_left =>
+  when set_wall_left => 
+  if fin = '1' and is_room = '1' then
+    PE <= finaleira_fim;
+  else
 PE <=  search_right;
---------------------------------------------------------------------------------
+  end if;
+  --------------------------------------------------------------------------------
   when search_right =>
 if point = '0' and ponto_de_teste.x /= "111111" then --se não achou parede, nem terminou a grade, continua procurando
   PE <= search_right;
   else if point = '1' then
       PE <= set_wall_right;
-  else others
+  else if fin = '1' and is_room = '1' then
+      PE <= finaleira_fim;
+    else others
       PE <= retorno;
 end if;
 --------------------------------------------------------------------------------
-  when set_wall_right =>
+  when set_wall_right => 
+  if fin = '1' and is_room = '1' then
+    PE <= finaleira_fim;
+  else
     PE <= set_room;
---------------------------------------------------------------------------------
+  end if;
+  --------------------------------------------------------------------------------
   when src_XMin => --verificar se a parede eh continua a partir do X minimo ate o X maximo, com Y = Y minimo
   if point = '1' and ponto_de_teste.x <= coord_XYMax.x and ponto_de_teste.x >= coord_XYMin.x  then --enquanto for uma parede, continua andando
     PE <= src_XMin;
-  else -- se a parede acabar, seta o XY
+  else if fin = '1' and is_room = '1' then
+      PE <= finaleira_fim;
+    else-- se a parede acabar, seta o XY
     PE <= set_wall_srcXMin;
   end if;
 --------------------------------------------------------------------------------
-  when set_wall_srcXMin =>
+  when set_wall_srcXMin => 
+  if fin = '1' and is_room = '1' then
+    PE <= finaleira_fim;
+  else
 PE <= src_YMin;
---------------------------------------------------------------------------------
+  end if;
+  --------------------------------------------------------------------------------
   when src_YMin => -- --verificar se a parede eh continua a partir do Y minimo ate o Y maximo, com X = X minimo
   if point = '1' and ponto_de_teste.y <= coord_XYMax.y and ponto_de_teste.y >= coord_XYMax.y then 
     PE <=  src_YMin;
-  else
+  else if fin = '1' and is_room = '1' then
+      PE <= finaleira_fim;
+    else
     PE <= set_wall_srcYMin;
   end if;
 --------------------------------------------------------------------------------
-  when set_wall_srcYMin =>
-PE <= src_XMax;
---------------------------------------------------------------------------------
+  when set_wall_srcYMin => 
+  if fin = '1' and is_room = '1' then
+    PE <= finaleira_fim;
+  else
+    PE <= src_XMax;
+  end if;
+  --------------------------------------------------------------------------------
   when src_XMax => -- verificar se a parede eh continua a partir do X maximo ate o X minimo, com Y = Y maximo
     if point = '1' and ponto_de_teste.x <= coord_XYMax.x and ponto_de_teste.x >= coord_XYMin.x then 
     PE <=  src_XMax;
-  else
+    else if fin = '1' and is_room = '1' then
+      PE <= finaleira_fim;
+    else
     PE <= set_wall_srcXMax;
   end if;
 --------------------------------------------------------------------------------
-  when set_wall_srcXMax =>
+  when set_wall_srcXMax => 
+  if fin = '1' and is_room = '1' then
+    PE <= finaleira_fim;
+  else
 PE <= src_YMax;
---------------------------------------------------------------------------------
+  end if;
+  --------------------------------------------------------------------------------
   when src_YMax => -- verificar se a parede eh continua a partir do Y maximo ate o Y minimo, com X = X maximo
     if point = '1' and ponto_de_teste.y <= coord_XYMax.y and ponto_de_teste.y >= coord_XYMin.y then 
     PE <=  src_YMax;
-  else
+    else if fin = '1' and is_room = '1' then
+      PE <= finaleira_fim;
+    else
     PE <= set_wall_srcYMax;
   end if;
 --------------------------------------------------------------------------------
-  when set_wall_srcYMax =>
+  when set_wall_srcYMax => 
+  if fin = '1' and is_room = '1' then
+    PE <= finaleira_fim;
+  else
 PE <= final_test;
+end if;
 --------------------------------------------------------------------------------
-  when retorno =>
+  when retorno => 
+  if fin = '1' and is_room = '1' then
+    PE <= finaleira_fim;
+  else
 PE <= idle;
+end if;
+
 --------------------------------------------------------------------------------
   when set_room => 
-PE <= src_XMin;
+  if fin = '1' and is_room = '1' then
+    PE <= finaleira_fim;
+  else
+    PE <= src_XMin;
+  end if;
 --------------------------------------------------------------------------------
---process(fin)
---begin
---  if fin = '1' and is_room = '1' then
+end process;
+
 --    coord_sala.x <= coord_XYMax.x - coord_XYMin.x;
 --    coord_sala.y <= coord_XYMax.y - coord_XYMin.y;
 --    cont_sala <= "0000";
