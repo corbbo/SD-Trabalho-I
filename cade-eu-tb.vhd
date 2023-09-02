@@ -110,7 +110,7 @@ architecture teste of tb_ondeestou is
                          (42,58,0), (10,57, 8), (6,40, 0), (54,30,5), (22,45,0), (16,51,0) );
  begin
 
-   a1:  entity work.ondeestou port map(clock=>clock, reset=>reset, 
+   a1:  entity work.cade_eu port map(clock=>clock, reset=>reset, 
                                        x=>x,  y=>y, find=>achar, prog=>prog,
                                        address=>address, point=>ponto, 
                                        fin=>fim, room=>sala);
@@ -170,6 +170,5 @@ architecture teste of tb_ondeestou is
   end process;    
    
 end teste;
-
 
 
