@@ -27,7 +27,7 @@ architecture arq of cade_eu is
                 init, idle, 
                 search_down, set_wall_down, search_up, set_wall_up, search_left, set_wall_left, search_right, set_wall_right, 
                 src_XMin, set_wall_srcXMin, src_YMin, set_wall_srcYMin, src_XMax, set_wall_srcXMax, src_YMax, set_wall_srcYMax, 
-                retorno, set_room, final_test, finaleira_fim
+                retorno, set_room, final_test, finaleira_fim, counting
                 );
   signal EA, PE: state;
   signal is_room: std_logic;
@@ -140,15 +140,14 @@ begin
             when finaleira_fim                          => coord_sala.x <= coord_XYMax.x - coord_XYMin.x;
                                                            coord_sala.y <= coord_XYMax.y - coord_XYMin.y;
                                                            cont_sala <= "0000";
-                                                           for cont_sala in 0 to N_ROOM loop
+            when counting                               => 
                                                              if salas(conv_integer(cont_sala)).x = coord_sala.x
                                                              and salas(conv_integer(cont_sala)).y = coord_sala.y then
                                                                room <= cont_sala;
                                                                else
                                                                  cont_sala <= cont_sala + '1';
                                                                end if;
-                                                             end loop;
-                                                           end if;
+                                                             
             
             when others                               => address <= x"00";
                                                                          
@@ -169,12 +168,16 @@ begin
   PE <= search_up;
   end if;
   --------------------------------------------------------------------------------
-when finaleira_fim => 
-if fin = '1' and is_room = '1' then
-  PE <= finaleira_fim;
-else
-PE <= idle;
+  when counting => 
+  if cont_sala <= N_ROOM then
+    PE <= counting;
+  else
+    PE <= idle;
   end if;
+  --------------------------------------------------------------------------------
+when finaleira_fim => 
+
+  PE <= counting;
   --------------------------------------------------------------------------------
   when idle =>
   if find = '1' then
