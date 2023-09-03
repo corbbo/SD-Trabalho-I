@@ -35,10 +35,11 @@ architecture arq of cade_eu is
   signal has_wall: std_logic_vector(3 downto 0);
   type ROOMS is array(0 to N_ROOM) of coord;
   signal salas : ROOMS;
-  signal cont_sala : STD_LOGIC_VECTOR(3 downto 0);
+  signal cont_sala, cont_sala2 : STD_LOGIC_VECTOR(3 downto 0);
 begin
     address <= ponto_de_teste.y & ponto_de_teste.x when EA = search_up or EA = search_down or EA = search_left or EA = search_right
                                                         or EA = src_XMin or EA = src_XMax or EA = src_YMin or EA = src_YMax 
+                                                   else x & y when EA = idle                                                   
                                                    else x"000";
 
    -- registro de salas
@@ -46,6 +47,7 @@ begin
    begin
       if reset='1' then 
             cont_sala <= (others=>'0');
+            salas <= (others => (x => "000000", y => "000000"));
       elsif clock'event and clock='1' then
             if  prog='1' then
                salas(conv_integer(cont_sala)).x <= x;
@@ -65,7 +67,6 @@ begin
         is_room <= '0';
         has_wall <= "0000"; --UP , DOWN , LEFT , RIGHT
         room <= "0000";
-        address <= x"000";
         fin <= '0';
         ponto_de_teste.x <= "000000";
         ponto_de_teste.y <= "000000";
@@ -75,8 +76,7 @@ begin
         coord_XYMax.y <= "000000";
         coord_sala.x <= "000000";
         coord_sala.y <= "000000";
-        cont_sala <= "0000";
-        salas <= (others => (x => "000000", y => "000000"));
+        cont_sala2 <= "0000";
     else if clock'event and clock = '1' then
         case EA is          
             when init                                 => ponto_de_teste.x <= x; -- pega o ponto que vai testar e coloca ele em coord.x
@@ -141,7 +141,6 @@ begin
                                                             is_room <= '1';
                                                             coord_sala.x <= coord_XYMax.x - coord_XYMin.x;
                                                             coord_sala.y <= coord_XYMax.y - coord_XYMin.y;
-                                                            cont_sala <= "0000";
                                                            else
                                                             is_room <= '0';
                                                             room <= "0000";
@@ -149,18 +148,18 @@ begin
                                                            end if;
 
             when room_n_check                           => if is_room = '1' then
-                                                            if salas(conv_integer(cont_sala)).x = coord_sala.x and salas(conv_integer(cont_sala)).y = coord_sala.y then
-                                                              room <= cont_sala;
+                                                            if salas(conv_integer(cont_sala2)).x = coord_sala.x and salas(conv_integer(cont_sala2)).y = coord_sala.y then
+                                                              room <= cont_sala2;
                                                               end if;
-                                                            cont_sala <= cont_sala + 1;
+                                                            cont_sala2 <= cont_sala2 + 1;
                                                            else
                                                             is_room <= '0';
-                                                            cont_sala <= "0000";
+                                                            cont_sala2 <= "0000";
                                                             room <= "0000";
                                                             fin <= '1';
                                                            end if;
               
-            when others                               => address <= x"000";
+            when others                               => null;
         end case;
     end if;                                                             
     EA <= PE;
@@ -278,7 +277,7 @@ begin
     PE <= src_XMin;
 --------------------------------------------------------------------------------
   when room_n_check => 
-    if is_room = '1' and cont_sala < N_ROOM then
+    if is_room = '1' and cont_sala2 < N_ROOM then
         PE <= room_n_check;
     else 
         PE <= idle;
