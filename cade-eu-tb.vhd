@@ -13,10 +13,11 @@ end tb_ondeestou;
 
 architecture teste of tb_ondeestou is
   
-   signal prog, reset, clock, achar, ponto, fim : std_logic := '0';
-   signal x, y:  STD_LOGIC_VECTOR(5 downto 0) := (others=>'0');
+   signal prog, reset, clock, achar, ponto, fim, isroom : std_logic := '0';
+   signal x, y, deltax, deltay :  STD_LOGIC_VECTOR(5 downto 0) := (others=>'0');
    signal address:  STD_LOGIC_VECTOR(11 downto 0) := (others=>'0');
-   signal sala : STD_LOGIC_VECTOR(3 downto 0) := (others=>'0');
+   signal sala, walls : STD_LOGIC_VECTOR(3 downto 0) := (others=>'0');
+   signal estado : STD_LOGIC_VECTOR(4 downto 0) := (others=>'0');
 
    type mapa_type is array(0 to 63) of STD_LOGIC_VECTOR(0 to 63) ;
    constant mapa : mapa_type :=  
@@ -112,8 +113,9 @@ architecture teste of tb_ondeestou is
 
    a1:  entity work.cade_eu port map(clock=>clock, reset=>reset, 
                                        x=>x,  y=>y, find=>achar, prog=>prog,
-                                       address=>address, point=>ponto, 
-                                       fin=>fim, room=>sala);
+                                       address=>address, point=>ponto, isroom=>isroom, 
+                                       fin=>fim, room=>sala, walls=>walls, estado=>estado,
+                                       deltax=>deltax, deltay=>deltay);
                                        
    ponto <= mapa(conv_integer(address(11 downto 6)))(conv_integer(address(5 downto 0)));
    
