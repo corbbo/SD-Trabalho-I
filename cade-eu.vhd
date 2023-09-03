@@ -26,7 +26,7 @@ architecture arq of cade_eu is
   signal ponto_de_teste, coord_XYMin, coord_XYMax, coord_sala: coord;
   type state is (
                 init, idle, 
-                search_down, set_wall_down, search_up, set_wall_up, search_left, set_wall_left, search_right, set_wall_right, 
+                search_down, search_up, search_left, search_right, 
                 src_XMin, set_wall_srcXMin, src_YMin, set_wall_srcYMin, src_XMax, set_wall_srcXMax, src_YMax, set_wall_srcYMax, 
                 retorno, set_room, final_test, room_n_check
                 );
@@ -39,7 +39,7 @@ architecture arq of cade_eu is
 begin
     address <= ponto_de_teste.y & ponto_de_teste.x when EA = search_up or EA = search_down or EA = search_left or EA = search_right
                                                         or EA = src_XMin or EA = src_XMax or EA = src_YMin or EA = src_YMax 
-                                                   else x & y when EA = idle                                                   
+                                                   else y & x when EA = idle                                                
                                                    else x"000";
 
    -- registro de salas
@@ -48,7 +48,7 @@ begin
       if reset='1' then 
             cont_sala <= (others=>'0');
             salas <= (others => (x => "000000", y => "000000"));
-      elsif clock'event and clock='1' then
+      elsif clock'event and clock='1' and cont_sala<N_ROOM then
             if  prog='1' then
                salas(conv_integer(cont_sala)).x <= x;
                salas(conv_integer(cont_sala)).y <= y;
@@ -83,30 +83,37 @@ begin
                                                          ponto_de_teste.y <= y; -- pega o ponto que vai testar e coloca ele em coord.y
             
             when search_up                            => ponto_de_teste.y <= ponto_de_teste.y + '1';
+                                                         if point = '1' then
+                                                            coord_XYMax.y <= ponto_de_teste.y; -- recebe coords maximas para teste em src_XMax
+                                                            ponto_de_teste.y <= y; -- volta para o ponto inicial
+                                                            has_wall(3) <= '1';
+                                                         end if;
+
             when search_down                          => ponto_de_teste.y <= ponto_de_teste.y - '1';
+                                                         if point = '1' then
+                                                            coord_XYMin.y <= ponto_de_teste.y; -- recebe coords minimas para teste em src_XMin
+                                                            ponto_de_teste.y <= y; -- volta para o ponto inicial
+                                                            has_wall(2) <= '1';
+                                                         end if;
+
             when search_right                         => ponto_de_teste.x <= ponto_de_teste.x + '1';
+                                                          if point = '1' then
+                                                              coord_XYMax.x <= ponto_de_teste.x; -- recebe coords maximas para teste em src_YMax
+                                                              ponto_de_teste.x <= x; -- volta para o ponto inicial
+                                                              has_wall(1) <= '1';
+                                                          end if;
+
             when search_left                          => ponto_de_teste.x <= ponto_de_teste.x - '1';
+                                                          if point = '1' then
+                                                              coord_XYMin.x <= ponto_de_teste.x; -- recebe coords minimas para teste em src_YMin
+                                                              ponto_de_teste.x <= x; -- volta para o ponto inicial
+                                                              has_wall(0) <= '1';
+                                                          end if;
 
             when src_XMin                             => ponto_de_teste.x <= ponto_de_teste.x + '1';
             when src_XMax                             => ponto_de_teste.x <= ponto_de_teste.x - '1';
             when src_YMin                             => ponto_de_teste.y <= ponto_de_teste.y + '1';
             when src_YMax                             => ponto_de_teste.y <= ponto_de_teste.y - '1';
-
-            when set_wall_up                          => has_wall(3) <= '1';
-                                                         coord_XYMax.y <= ponto_de_teste.y;
-                                                         ponto_de_teste.y <= y;
-
-            when set_wall_down                        => has_wall(2) <= '1';
-                                                         coord_XYMin.y <= ponto_de_teste.y;
-                                                         ponto_de_teste.y <= y;
-
-            when set_wall_left                        => has_wall(1) <= '1';
-                                                         coord_XYMin.x <= ponto_de_teste.x;
-                                                         ponto_de_teste.x <= x;
-
-            when set_wall_right                       => has_wall(0) <= '1';
-                                                         coord_XYMax.x <= ponto_de_teste.x;
-                                                         ponto_de_teste.x <= x;
 
             when set_room                             =>  if has_wall = "1111" then
                                                            is_room <= '1';
@@ -129,9 +136,11 @@ begin
                                                             room <= "0000";
                                                             fin <= '1';
                                                           end if;
+
             when set_wall_srcYMin                       => has_wall(2) <= '1';
                                                            ponto_de_teste.y <= coord_XYMax.y; -- recebe coords maximas para teste em src_XMax
                                                            ponto_de_teste.x <= coord_XYMax.x; 
+                                                           
             when set_wall_srcXMax                       => has_wall(1) <= '1';
                                                            ponto_de_teste.x <= coord_XYMax.x; -- recebe coords maximas para teste em src_YMax
                                                            -- nao recebe coord_XYMax.y pois ja recebeu no set_wall_srcYMin
@@ -161,13 +170,13 @@ begin
               
             when others                               => null;
         end case;
-        EA <= PE;
-      end if;                                                             
-    end if;
-  end process;
+      EA <= PE;
+    end if;                                                             
+  end if;
+end process;
 
   -- logica de estados
-  process(EA, find)
+  process(EA, find, point, is_room)
   begin
     case EA is
 --------------------------------------------------------------------------------
@@ -182,55 +191,40 @@ begin
     end if;
 -------------------------------------------------------------------------------- 
   when search_down => 
-    if point = '0' and ponto_de_teste.y /= "111111" then --se não achou parede, nem terminou a grade, continua procurando
+   if point = '1' then -- achou parede
+        PE <= search_left;
+    elsif point = '0' and ponto_de_teste.y = "000000" then
+        PE <= final_test;
+    else
         PE <= search_down;
-    else if point = '1' then -- achou parede
-        PE <= set_wall_down;
-        else PE <= final_test;
-        end if;
     end if;
---------------------------------------------------------------------------------
-  when set_wall_down =>
-    PE <= search_up;
 --------------------------------------------------------------------------------
   when search_up =>
-  --while !(is wall) volta pra search_up
-    if point = '0' and ponto_de_teste.y /= "000000" then -- se não achou parede, nem terminou a grade, continua procurando
+    if point = '1' then -- achou parede
+        PE <= search_right;
+    elsif point = '0' and ponto_de_teste.y = "111111" then
+        PE <= final_test;
+    else
         PE <= search_up;
-    else if point = '1' then -- achou parede
-        PE <= set_wall_up;
-        else PE <= final_test;
-        end if;
     end if;
---------------------------------------------------------------------------------
-  when set_wall_up =>
-    PE <= search_left;
 --------------------------------------------------------------------------------
   when search_left =>
-    if point = '0' and ponto_de_teste.x /= "000000" then --se não achou parede, nem terminou a grade, continua procurando
-        PE <= search_left;
-    else if point = '1' then -- achou parede
-        PE <= set_wall_right;
-    else 
+    if point = '1' then
+        PE <= search_right;
+    elsif point = '0' and ponto_de_teste.x = "000000" then
         PE <= final_test;
+    else
+        PE <= search_left;
     end if;
-    end if;
---------------------------------------------------------------------------------
-  when set_wall_left =>
-    PE <=  search_right;
 --------------------------------------------------------------------------------
   when search_right =>
-    if point = '0' and ponto_de_teste.x /= "111111" then --se não achou parede, nem terminou a grade, continua procurando
-        PE <= search_right;
-    else if point = '1' then
-        PE <= set_wall_right;
-    else 
+    if point = '1' then
+        PE <= set_room;
+    elsif point = '0' and ponto_de_teste.x = "111111" then
         PE <= final_test;
+    else
+        PE <= search_right;
     end if;
-    end if;
---------------------------------------------------------------------------------
-  when set_wall_right =>
-    PE <= set_room;
 --------------------------------------------------------------------------------
   when src_XMin => --verificar se a parede eh continua a partir do X minimo ate o X maximo, com Y = Y minimo
     if point = '1' and ponto_de_teste.x <= coord_XYMax.x and ponto_de_teste.x >= coord_XYMin.x  then --enquanto for uma parede, continua andando
