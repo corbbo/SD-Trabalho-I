@@ -161,8 +161,8 @@ begin
               
             when others                               => null;
         end case;
-    end if;                                                             
-    EA <= PE;
+        EA <= PE;
+      end if;                                                             
     end if;
   end process;
 
@@ -199,9 +199,8 @@ begin
         PE <= search_up;
     else if point = '1' then -- achou parede
         PE <= set_wall_up;
-    else  -- a grade terminou sem achar parede, logo não é uma sala
-        PE <= final_test;
-    end if;
+        else PE <= final_test;
+        end if;
     end if;
 --------------------------------------------------------------------------------
   when set_wall_up =>
